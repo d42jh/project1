@@ -18,13 +18,15 @@ Read about it online.
 import os
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
-from flask import Flask, request, render_template, g, redirect, Response
+from flask import Flask, request, render_template, g, redirect, Response,session,flash
+import time
+import datetime
+import numbers
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 
-
-
+comment_id = 3
 # XXX: The Database URI should be in the format of: 
 #
 #     postgresql://USER:PASSWORD@<IP_OF_POSTGRE_SQL_SERVER>/<DB_NAME>
@@ -36,8 +38,8 @@ app = Flask(__name__, template_folder=tmpl_dir)
 # For your convenience, we already set it to the class database
 
 # Use the DB credentials you received by e-mail
-DB_USER = "YOUR_DB_USERNAME_HERE"
-DB_PASSWORD = "YOUR_DB_PASSWORD_HERE"
+DB_USER = "jh4021"
+DB_PASSWORD = "lezx36sj"
 
 DB_SERVER = "w4111.cisxo09blonu.us-east-1.rds.amazonaws.com"
 
@@ -49,14 +51,6 @@ DATABASEURI = "postgresql://"+DB_USER+":"+DB_PASSWORD+"@"+DB_SERVER+"/w4111"
 #
 engine = create_engine(DATABASEURI)
 
-
-# Here we create a test table and insert some values in it
-engine.execute("""DROP TABLE IF EXISTS test;""")
-engine.execute("""CREATE TABLE IF NOT EXISTS test (
-  id serial,
-  name text
-);""")
-engine.execute("""INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');""")
 
 
 
@@ -102,102 +96,417 @@ def teardown_request(exception):
 # see for decorators: http://simeonfranklin.com/blog/2012/jul/1/python-decorators-in-12-steps/
 #
 @app.route('/')
-def index():
-  """
-  request is a special object that Flask provides to access web request information:
 
-  request.method:   "GET" or "POST"
-  request.form:     if the browser submitted a form, this contains the data in the form
-  request.args:     dictionary of URL arguments e.g., {a:1, b:2} for http://localhost?a=1&b=2
+def home():
+  if not session.get('logged_in'):
+      return render_template('login.html')
+  else:
+      s = session['email_address']
+      context = dict(data = s)
+      return render_template('home.html', **context)
+ 
+@app.route('/login', methods = ['POST'])
 
-  See its API: http://flask.pocoo.org/docs/0.10/api/#incoming-request-data
-  """
-
-  # DEBUG: this is debugging code to see what request looks like
-  print request.args
-
-
-  #
-  # example of a database query
-  #
-  cursor = g.conn.execute("SELECT name FROM test")
-  names = []
-  for result in cursor:
-    names.append(result['name'])  # can also be accessed using result[0]
+def login():
+  email_address = request.form['email_address']
+  password = request.form['password']
+  cursor = engine.execute("SELECT email_address, password FROM Users")
+  for res in cursor:
+    if (email_address, password ) == res:
+      session['logged_in'] = True
+      session['email_address'] = res[0]
+    else:
+      flash('wrong information!')
   cursor.close()
+  return home()
 
-  #
-  # Flask uses Jinja templates, which is an extension to HTML where you can
-  # pass data to a template and dynamically generate HTML based on the data
-  # (you can think of it as simple PHP)
-  # documentation: https://realpython.com/blog/python/primer-on-jinja-templating/
-  #
-  # You can see an example template in templates/index.html
-  #
-  # context are the variables that are passed to the template.
-  # for example, "data" key in the context variable defined below will be 
-  # accessible as a variable in index.html:
-  #
-  #     # will print: [u'grace hopper', u'alan turing', u'ada lovelace']
-  #     <div>{{data}}</div>
-  #     
-  #     # creates a <div> tag for each element in data
-  #     # will print: 
-  #     #
-  #     #   <div>grace hopper</div>
-  #     #   <div>alan turing</div>
-  #     #   <div>ada lovelace</div>
-  #     #
-  #     {% for n in data %}
-  #     <div>{{n}}</div>
-  #     {% endfor %}
-  #
-  context = dict(data = names)
+@app.route("/logout")
+def logout():
+    session['logged_in'] = False
+    return home()
+ 
+
+# Example of adding new data to the database
+
+# strict slash? not sure
+@app.route('/street/<name>/<borough>')
+def specific_street(name,borough,check_report=False):
+  
+  name1 = name
+  borough1 = borough
+  #cmd = 'SELECT * FROM written_comment_about where name =' + (:name1) + 'and borough ='+ (:borough1)+';'
+  cmd_p = 'SELECT avg(score) from evaluate where name = :x and borough = :y '
+  cursor1 = g.conn.execute(text(cmd_p), x = name1, y = borough1)
+  for result in cursor1:
+    data_p = str(result[0])
+  if data_p != 'None':
+    data_p = float(data_p)
+    data_p = float("{0:.2f}".format(data_p))
+  else:
+    data_p = 'None'
+
+  cmd = 'SELECT content,uid,written_comment_about.time FROM written_comment_about where name = :x and borough = :y';
+
+  cursor = g.conn.execute(text(cmd), x = name1, y = borough1)
+  street_part = []
+  for result in cursor:
+    #print result[0]
+    st_a = result[0].encode('UTF-8')
+    st_b = result[1].encode('UTF-8')
+    st_c = result[2]
+    modified_result = st_a,st_b,st_c
+    street_part.append(modified_result)  
+  cursor.close()
+  context = dict(data = street_part,data1 = name1, data2 = borough1, data_3 = data_p, check_report = check_report)
+  
+  return render_template('street_specific.html',**context) 
+
+@app.route('/street')
+def street():
+  cmd = 'SELECT name, borough FROM street';
+
+  cursor = g.conn.execute(text(cmd))
+  street_part = []
+  for result in cursor:
+    #print result[0]
+    st_a = result[0].encode('UTF-8')
+    st_b = result[1].encode('UTF-8')
+    
+    modified_result = st_a,st_b
+    street_part.append(modified_result)  
+  cursor.close()
+  context = dict(data = street_part)
+  
+  return render_template('street_main.html',**context) 
+
+@app.route('/street/streetsearch', methods = ['POST'])
+def street_search():
+
+  #if name == None or borough == None:
+  name1 = request.form['street_name']
+  borough1 = request.form['borough']
+  
+  cmd_c = 'SELECT name,borough from street where name = :x and borough = :y '
+
+  
+  cursor = g.conn.execute(text(cmd_c), x = name1, y = borough1)
+  z = cursor.fetchall()
+  print z
+  if not z:
+    return redirect('/street')
+  else:
+
+    cmd_p = 'SELECT avg(score) from evaluate where name = :x and borough = :y '
+    cursor = g.conn.execute(text(cmd_p), x = name1, y = borough1)
+    #print cursor1
+    for result in cursor:
+      data_p = str(result[0])
+    #print data_p
+    if data_p != 'None':
+      data_p = float(data_p)
+      data_p = float("{0:.2f}".format(data_p))
+    else:
+      data_p = 'None'
+    cmd = 'SELECT content,uid,written_comment_about.time FROM written_comment_about where name = :x and borough = :y';
+
+    cursor = g.conn.execute(text(cmd), x = name1, y = borough1)
+    street_part = []
+    for result in cursor:
+      print result[0]
+      st_a = result[0].encode('UTF-8')
+      st_b = result[1].encode('UTF-8')
+      st_c = result[2]
+      modified_result = st_a,st_b,st_c
+      street_part.append(modified_result) 
+
+    cursor.close()
+    
+    context = dict(data = street_part,data1 = name1, data2 = borough1, data_3 = data_p)
+    
+    return render_template('street_specific.html',**context)
+
+@app.route('/comment' , methods = ['POST'])
+def comment():
+  user_email = session['email_address']
+  name1 = request.form['street_name']
+  #print name1
+  borough1 = request.form['borough']
+  comment = request.form['comment']
+  check = str(comment)
+  if len(comment) == 0:
+    return specific_street(name1,borough1) 
+ 
+  date_c = time.strftime("%Y-%m-%d", time.localtime()) 
+  global comment_id
+  comment_id += 1
+  cid = comment_id
+  cmd = 'INSERT INTO written_comment_about (cid,name,borough,content,uid,"time") VALUES ((:cid),(:name),(:borough), (:content),(:uid),(:time_c))';
+
+  g.conn.execute(text(cmd), cid = cid, name = name1, borough = borough1, uid = user_email, content = comment, time_c = date_c)
+  return specific_street(name1,borough1)
 
 
-  #
-  # render_template looks in the templates/ folder for files.
-  # for example, the below file reads template/index.html
-  #
-  return render_template("index.html", **context)
+@app.route('/evaluate' , methods = ['POST'])
+def evaluate():
+  user_email = session['email_address']
+  name1 = request.form['street_name']
+  #print name1
+  borough1 = request.form['borough']
+  score = request.form['score']
+  if len(score) == 0:
+    return specific_street(name1,borough1)
+  date_c = time.strftime("%Y-%m-%d", time.localtime()) 
+  #global comment_id
+  #comment_id += 1
+  #cid = comment_id
+  cmd = 'INSERT INTO evaluate (uid,name,borough,score,since) VALUES ((:uid),(:name),(:borough), (:score),(:since))';
 
-#
-# This is an example of a different path.  You can see it at
-# 
-#     localhost:8111/another
-#
-# notice that the functio name is another() rather than index()
-# the functions for each app.route needs to have different names
-#
+  g.conn.execute(text(cmd), uid = user_email, name = name1, borough = borough1, score = score, since = date_c)
+  return specific_street(name1,borough1)
+    
+@app.route('/report' , methods = ['POST'])
+def report():
+  name1 = request.form['street_name']
+  borough1 = request.form['borough']
+  user_email = session['email_address']
+  #print name1
+  time1 = request.form['time']
+  date1 = request.form['date']
+  casualty = request.form['casualty']
+  if len(casualty) == 0 or len(time1) == 0 or len(date1) == 0:
+    return specific_street(name1,borough1)
+  cmd1 = 'INSERT INTO collision_occurat(c_time,c_date,name,borough,casualty_number) VALUES ((:c_time),(:c_date),(:name), (:borough),(:casualty_number))';
+
+  g.conn.execute(text(cmd1), c_time = time1, c_date = date1, borough = borough1, name = name1, casualty_number = casualty)
+  
+  cmd2 = 'INSERT INTO report(c_time,c_date,name,borough,uid) VALUES ((:c_time),(:c_date),(:name), (:borough),(:uid))';
+
+  g.conn.execute(text(cmd2), c_time = time1, c_date = date1, borough = borough1, name = name1, uid = user_email)
+
+  #cmd3 = 'INSERT INTO contributeby_vehicle(c_time,c_date,name,borough,vid, type_code, factor) VALUES ((:c_time),(:c_date),(:name), (:borough),(:vid),(:type_code),(:factor))';
+
+  #g.conn.execute(text(cmd3), c_time = time_1, c_date = date1, borough = borough1, name = name1, uid = user_email)
+
+  return specific_street(name1,borough1,check_report = True)
+
+
+
+####another author #################################################3333
 @app.route('/another')
 def another():
   return render_template("anotherfile.html")
 
+@app.route('/search')
+def search():
+  return render_template("search.html")
 
-# Example of adding new data to the database
-@app.route('/add', methods=['POST'])
-def add():
-  name = request.form['name']
-  print name
-  cmd = 'INSERT INTO test(name) VALUES (:name1), (:name2)';
-  g.conn.execute(text(cmd), name1 = name, name2 = name);
-  return redirect('/')
+@app.route('/searchzip')
+def searchzip():
+  cursor = g.conn.execute("SELECT zipcode FROM street")
+  names = []
+  for result in cursor:
+    names.append(result['zipcode'])  # can also be accessed using result[0]
+  context = dict(data=names)
+  return render_template("searchzip.html", **context)
+
+@app.route('/addx', methods=['POST', 'GET'])
+def addx():
+  zipcode = request.form['zipcode']
+  # cmd = 'INSERT INTO test(name) VALUES (:name1), (:name2)';
+  # g.conn.execute(text(cmd), name1 = name, name2 = name);
+  cmd = 'SELECT name FROM street WHERE zipcode=:zipcode1'
+  try:
+    g.conn.execute(text(cmd), zipcode1=zipcode)
+  except:
+    context = 1
+  else:
+    cursor = g.conn.execute(text(cmd), zipcode1=zipcode)
+    names = []
+    for result in cursor:
+      names.append(result['name'])  # can also be accessed using result[0]
+    cursor.close()
+    context = dict(data=names)
+
+  if context != 1:
+    return render_template("results.html", context=context)
+  else:
+    return redirect('/another')
+
+@app.route('/searchcol')
+def searchcol():
+  return render_template("searchcol.html")
 
 
-@app.route('/login')
-def login():
-    abort(401)
-    this_is_never_executed()
+def searchall(what, form, x):
+  form = str(form)
+  what2 = request.form[str(what)]
+  x = str(x)
+  cmd = 'SELECT ' + x + ' FROM ' + form + ' WHERE ' + what + \
+        '=:what1'
+
+  try:
+    g.conn.execute(text(cmd), what1=what2)
+  except:
+    context = 1
+  else:
+    cursor = g.conn.execute(text(cmd), what1=what2)
+    names = []
+    names.append(cursor.keys())
+    for result in cursor:
+      x1 = datetime.time.strftime(result[0], '%H:%M')
+      x2 = datetime.date.strftime(result[1], '%D')
+      x3 = result[2].encode('UTF-8')
+      x4 = result[3].encode('UTF-8')
+      x5 = int(result[4])
+      x = [x1, x2, x3, x4, x5]
+      names.append(x)  # can also be accessed using result[0]
+    cursor.close()
+    context = dict(data=names)
+  return context
+
+@app.route('/searchdist')
+def searchdist():
+  return render_template("searchdist.html")
+
+def groupby(what, form):
+  form = str(form)
+  what2 = request.form[str(what)]
+  cmd = 'SELECT COUNT(*)' + ' FROM ' + form + ' WHERE ' + what + '=:what1 GROUP BY '+ \
+        what
+  try:
+    cursor = g.conn.execute(text(cmd), what1=what2)
+  except:
+    context = 1
+  else:
+    names = []
+    for result in cursor:
+      names.append(int(result[0]))  # can also be accessed using result[0]
+    cursor.close()
+    context = dict(data=names)
+  return context
+
+def dist(what, form):
+  form = str(form)
+  what2 = str(what)
+
+  cmd = 'SELECT '+ what2 +', COUNT(*) count' + ' FROM ' + form + ' GROUP BY '+ what2 + \
+        ' ORDER BY count DESC'
+  try:
+    g.conn.execute(text(cmd), what1=what2)
+  except:
+    context = 1
+  else:
+    cursor = g.conn.execute(text(cmd), what1=what2)
+    names = []
+    names.append(cursor.keys())
+    for result in cursor:
+      xs = []
+      for x in result:
+        if isinstance(x, datetime.time):
+          x1 = datetime.time.strftime(x, '%H:%M')
+        elif isinstance(x, datetime.date):
+          x1 = datetime.date.strftime(x, '%D')
+        elif isinstance(x, unicode):
+          x1 = x.encode('UTF-8')
+        elif isinstance(x, numbers.Integral):
+          x1 = int(x)
+        else:
+          x1 = x
+        xs.append(x1)
+
+      names.append(xs)  #
+    cursor.close()
+    context = dict(data=names)
+  return context
+
+def avg(what, form):
+  what2 = str(what)
+  cmd = 'SELECT '+ what2 +', AVG(score) avg' + ' FROM ' + form + ' GROUP BY '+ what2 + \
+        ' ORDER BY avg DESC'
+  try:
+    g.conn.execute(text(cmd), what1=what2)
+  except:
+    context = 1
+  else:
+    cursor = g.conn.execute(text(cmd), what1=what2)
+    names = []
+    for result in cursor:
+      x1 = result[0].encode('UTF-8')
+      x2 = result[1].encode('UTF-8')
+      x3 = round(result[2], 2)
+      x = (x1, x2, x3)
+      names.append(x)  # can also be accessed using result[0]
+    cursor.close()
+    context = dict(data=names)
+  return context
+
+def judge(context):
+  if context != 1:
+    return render_template("results.html", context = context)
+  else:
+    return redirect('/another')
+
+@app.route('/resultdist', methods=['POST', 'GET'])
+def resultdist():
+  try:
+    str(request.form['group_by_item'])
+  except:
+    item = 100
+  else:
+    item = str(request.form['group_by_item'])
+
+  if item == '1':
+    context = dist('type_code', 'contributeby_vehicle')
+
+  elif item == '2':
+    context = dist('factor', 'contributeby_vehicle')
+
+  elif item == '3':
+    context = dist('c_time, c_date, name, borough', 'report')
+
+  elif item == '4':
+    context = dist('name, borough', 'collision_occurat')
+
+  elif item == '5':
+    context = dist('name, borough', 'written_comment_about')
+
+  elif item == '6':
+    context = avg('name, borough', 'evaluate')
+
+  else:
+    context = 1
+
+  return judge(context)
 
 
+@app.route('/results', methods=['POST', 'GET'])
+def resultveh():
+  context = groupby('type_code', 'contributeby_vehicle')
+  return judge(context)
+
+@app.route('/searchveh', methods=['POST', 'GET'])
+def searchveh():
+  cursor = g.conn.execute("SELECT distinct type_code FROM contributeby_vehicle")
+  names = []
+  for result in cursor:
+    names.append(result[0].encode('UTF-8'))  # can also be accessed using result[0]
+  context = dict(data=names)
+  return render_template("searchveh.html", **context)
+
+@app.route('/resultcol', methods=['POST', 'GET'])
+def resultcol():
+  context = searchall('c_time', 'collision_occurat', '*')
+  return judge(context)
 if __name__ == "__main__":
-  import click
 
+  import click
+  app.secret_key = os.urandom(12)
   @click.command()
   @click.option('--debug', is_flag=True)
   @click.option('--threaded', is_flag=True)
   @click.argument('HOST', default='0.0.0.0')
   @click.argument('PORT', default=8111, type=int)
+
   def run(debug, threaded, host, port):
     """
     This function handles command line parameters.
