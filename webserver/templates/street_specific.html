@@ -1,0 +1,53 @@
+<html>
+ <head> <meta charset="UTF-8"></head>
+
+<body>
+<h1>street page</h1>
+<h2>the score for this street is {{data_3}}</h2>
+<h2>street comment</h2>
+<div>
+    {% for n in data %}
+    <p>comment:{{n[0]}} user:{{n[1]}} date:{{n[2]}}</p>
+    </div>
+    {% endfor %}
+
+<h2>add comment</h2>
+<form method="POST" action="/comment">
+<p>your comment: 
+	<input type= "hidden" name = "street_name" value= "{{data1}}">
+	<input type= "hidden" name = "borough" value= {{data2}}>
+	<input type="text" name="comment"> 
+	<input type="submit" value="make"></p>
+</form>
+
+<h2>evaluate the street</h2>
+<form method="POST" action="/evaluate">
+<p>your score: 
+	<input type= "hidden" name = "street_name" value= "{{data1}}">
+	<input type= "hidden" name = "borough" value= {{data2}}>
+	<input type="number" name="score" min="1" max="5">
+	<input type="submit" value="evaluate"></p>
+</form>
+
+<h2>report the collision</h2>
+<form method="POST" action="/report">
+<p>collision info: 
+	<input type= "hidden" name = "street_name" value= "{{data1}}">
+	<input type= "hidden" name = "borough" value= {{data2}}>
+	<input type="time" name="time" placeholder="time">
+	<input type="date" name="date" placeholder="date">
+	<input type="number" name="casualty" min="0" max="1000"> 
+	<input type="submit" value="report"></p>
+</form>
+
+<div>
+    {% if check_report %}
+	report successful!
+    {% endif %}
+</div>
+
+</body>
+
+
+</html>
+

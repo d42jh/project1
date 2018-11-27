@@ -1,0 +1,24 @@
+<html>
+ <head> <meta charset="UTF-8"></head>
+
+<body>
+<h1>street search</h1>
+<form method="POST" action="/street/streetsearch">
+<p>INFO of street: 
+	<input type="text" name="street_name" placeholder="street_name"> 
+	<input type="text" name="borough" placeholder="borough"> 
+	<input type="submit" value="search"></p>
+</form>
+
+<h1>street list</h1>
+<div>
+    {% for n in data %}
+    <p><a href="/street/{{n[0]}}/{{n[1]}}">name:{{n[0]}}, borough:{{n[1]}}</a></p>
+    </div>
+    {% endfor %}
+
+</body>
+
+
+</html>
+

@@ -1,0 +1,28 @@
+<html>
+  <style>
+    body{ 
+      font-size: 25pt;
+      font-family: arial;
+    }
+  </style>
+
+
+<body>
+{% block body %}
+{% if session['logged_in'] %}
+<p>You're logged in already!</p>
+{% else %}
+<p>login</p>
+<form action="/login" method="POST">
+  <input type="email_address" name="email_address" placeholder="email_address">
+  <br>
+  <input type="password" name="password" placeholder="Password">
+  <br>
+  <input type="submit" value="Log in">
+</form>
+{% endif %}
+{% endblock %}
+</body>
+
+
+</html>
