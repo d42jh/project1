@@ -23,8 +23,8 @@ A { text-decoration: none}
 <div class="w3-container">
 <form method="POST" action="/street/streetsearch">
 <p>info of street:
-	<input type="text" name="street_name" placeholder="street_name">
-	<input type="text" name="borough" placeholder="borough">
+	<input type="text" name="street_name" placeholder="street_name" required="required">
+	<input type="text" name="borough" placeholder="borough" required="required">
 	<input type="submit" value="search"></p>
 </form>
 </div>
@@ -34,13 +34,13 @@ A { text-decoration: none}
 <div class="w3-container">
 <form method="POST" action="/street/reportnew">
 <p>info of collision:
-	<input input onkeyup="value=value.replace(/[^\s0-9\a-\z\A-\Z]/g,'')" type="text" name="street_name" placeholder="street_name">
+	<input input onkeyup="value=value.replace(/[^\s0-9\a-\z\A-\Z]/g,'')" type="text" name="street_name" placeholder="street_name" required="required">
 	<input input onkeyup="value=value.replace(/[^\s0-9\a-\z\A-\Z]/g,'')"
-	type="text" name="borough" placeholder="borough" >
-	<input type="number" name="zipcode" placeholder="zipcode" min = "00000" max = "99999" minlength = "5" maxlength = "5">
+	type="text" name="borough" placeholder="borough" required="required">
+	<input type="number" name="zipcode" placeholder="zipcode" min = "00000" max = "99999" minlength = "5" maxlength = "5" required="required">
 	<input type="time" name="time" placeholder="time">
 	<input type="date" name="date" placeholder="date" min = "1940-01-01" max="2018-11-28">
-	<input type="number" name="casualty" min="0" placeholder="casualty" max="1000">
+	<input type="number" name="casualty" min="0" placeholder="casualty" max="1000" required="required">
 	<input type="submit" value="report"></p>
 </form>
 </div>
