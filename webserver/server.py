@@ -143,7 +143,7 @@ def specific_street(name, borough, check_op=False):
     else:
         data_p = 'None'
 
-    cmd = 'SELECT content,uid,written_comment_about.time FROM written_comment_about where name = :x and borough = :y';
+    cmd = 'SELECT content,uid,written_comment_about.time FROM written_comment_about where name = :x and borough = :y order by written_comment_about.time desc';
 
     cursor = g.conn.execute(text(cmd), x=name1, y=borough1)
     street_part = []
@@ -170,7 +170,7 @@ def specific_street(name, borough, check_op=False):
 
 @app.route('/street')
 def street():
-    cmd = 'SELECT name, borough FROM street;'
+    cmd = 'SELECT name, borough FROM street order by name, borough;'
 
     cursor = g.conn.execute(text(cmd))
     street_part = []
@@ -223,7 +223,7 @@ def street_search():
             data_p = float("{0:.2f}".format(data_p))
         else:
             data_p = 'None'
-        cmd = 'SELECT content,uid,written_comment_about.time FROM written_comment_about where name = :x and borough = :y';
+        cmd = 'SELECT content,uid,written_comment_about.time FROM written_comment_about where name = :x and borough = :y order by written_comment_about.time desc';
 
         cursor = g.conn.execute(text(cmd), x=name1, y=borough1)
         street_part = []
@@ -565,8 +565,8 @@ def dist(what, form):
 
 def avg(what, form):
     what2 = str(what)
-    cmd = 'SELECT ' + what2 + ', AVG(score) avg' + ' FROM ' + form + ' GROUP BY ' + what2 + \
-          ' ORDER BY avg DESC'
+    cmd = 'SELECT ' + what2 + ', AVG(score) avg_score' + ' FROM ' + form + ' GROUP BY ' + what2 + \
+          ' ORDER BY avg_score DESC'
     try:
         g.conn.execute(text(cmd), what1=what2)
     except:
@@ -574,11 +574,17 @@ def avg(what, form):
     else:
         cursor = g.conn.execute(text(cmd), what1=what2)
         names = []
+        col = []
+        for y in cursor.keys():
+            y = y.decode('UTF-8').encode('UTF-8')
+            col.append(y)
+
+        names.append(col)
         for result in cursor:
             x1 = result[0].encode('UTF-8')
             x2 = result[1].encode('UTF-8')
             x3 = round(result[2], 2)
-            x = (x1, x2, x3)
+            x = [x1, x2, x3]
             names.append(x)  # can also be accessed using result[0]
         cursor.close()
         context = dict(data=names)
@@ -652,8 +658,40 @@ def resultre():
     cmd = "SELECT * FROM report WHERE uid=" + "'"+str(x)+"'"
     cursor = g.conn.execute(cmd)
     names = []
+    col = []
+    for y in cursor.keys():
+        y = y.decode('UTF-8').encode('UTF-8')
+        col.append(y)
+
+    names.append(col)
+
     for result in cursor:
-        names.append(result)  # can also be accessed using result[0]
+        xs = []
+        for x in result:
+            if isinstance(x, datetime.time):
+                try:
+                    datetime.time.strftime(x, '%H:%M')
+                except:
+                    x1 = x
+                else:
+                    x1 = datetime.time.strftime(x, '%H:%M')
+            elif isinstance(x, datetime.date):
+                try:
+                    datetime.date.strftime(x, '%D')
+                except:
+                    x1 = x
+                else:
+                    x1 = datetime.date.strftime(x, '%D')
+            elif isinstance(x, unicode):
+                x1 = x.encode('UTF-8')
+            elif isinstance(x, numbers.Integral):
+                x1 = int(x)
+            else:
+                x1 = x
+            xs.append(x1)
+
+        names.append(xs)
+
     context = dict(data=names)
     return judge(context)
 
