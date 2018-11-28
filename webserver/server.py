@@ -262,9 +262,24 @@ def comment():
         return specific_street(name1, borough1)
 
     date_c = time.strftime("%Y-%m-%d", time.localtime())
-    global comment_id
-    comment_id += 1
-    cid = comment_id
+    cmd_c = 'SELECT max(cid) FROM written_comment_about where name = :x and borough = :y'
+    try:
+        g.conn.execute(text(cmd_c), x = name1, y = borough1)
+    except:
+        print 'works'
+        cid = 0
+    else:
+        cursor = g.conn.execute(text(cmd_c),x = name1, y = borough1)
+        row = cursor.fetchall()
+        if row[0][0] is not None:
+            print row
+            print str(row[0][0])
+            print(len(row))
+            cid = int(str(row[0][0]))
+        else:
+            print 'workselse'
+            cid = 0
+    cid = cid + 1
     try:
         cmd = 'INSERT INTO written_comment_about (cid,name,borough,content,uid,"time") VALUES ((:cid),(:name),(:borough), (:content),(:uid),(:time_c))';
         g.conn.execute(text(cmd), cid=cid, name=name1, borough=borough1, uid=user_email, content=comment, time_c=date_c)
