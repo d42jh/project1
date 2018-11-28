@@ -129,7 +129,7 @@ def logout():
 
 # strict slash? not sure
 @app.route('/street/<name>/<borough>')
-def specific_street(name, borough, check_report=False):
+def specific_street(name, borough, check_op=False):
     name1 = name
     borough1 = borough
     # cmd = 'SELECT * FROM written_comment_about where name =' + (:name1) + 'and borough ='+ (:borough1)+';'
@@ -163,7 +163,7 @@ def specific_street(name, borough, check_report=False):
             modified_result = st_a, st_b, st_c
             street_part.append(modified_result)
     cursor.close()
-    context = dict(data=street_part, data1=name1, data2=borough1, data_3=data_p, check_report=check_report)
+    context = dict(data=street_part, data1=name1, data2=borough1, data_3=data_p, check_op=check_op)
 
     return render_template('street_specific.html', **context)
 
@@ -291,7 +291,7 @@ def evaluate():
     except:
         return specific_street(name1, borough1)
     else:
-        return specific_street(name1, borough1)
+        return specific_street(name1, borough1, check_op=True)
 
 
 @app.route('/report', methods=['POST'])
@@ -319,7 +319,7 @@ def report():
 
     # g.conn.execute(text(cmd3), c_time = time_1, c_date = date1, borough = borough1, name = name1, uid = user_email)
     else:
-        return specific_street(name1, borough1, check_report=True)
+        return specific_street(name1, borough1, check_op=True)
 
 
 @app.route('/street/reportnew', methods=['POST'])
@@ -345,6 +345,15 @@ def reportnew():
             cmd0 = 'INSERT INTO street(name,borough,zipcode) VALUES ((:x), ( :y), ( :z)) '
 
             g.conn.execute(text(cmd0), x=name1, y=borough1, z=zipcode)
+
+            cmd1 = 'INSERT INTO collision_occurat(c_time,c_date,name,borough,casualty_number) VALUES ((:c_time),(:c_date),(:name), (:borough),(:casualty_number))';
+
+            g.conn.execute(text(cmd1), c_time=time1, c_date=date1, borough=borough1, name=name1,
+                           casualty_number=casualty)
+
+            cmd2 = 'INSERT INTO report(c_time,c_date,name,borough,uid) VALUES ((:c_time),(:c_date),(:name), (:borough),(:uid))';
+
+            g.conn.execute(text(cmd2), c_time=time1, c_date=date1, borough=borough1, name=name1, uid=user_email)
 
         else:
 
@@ -434,7 +443,12 @@ def searchall(what, form, x):
     else:
         cursor = g.conn.execute(text(cmd), what1=what2)
         names = []
-        names.append(cursor.keys())
+        col = []
+        for y in cursor.keys():
+            y = y.decode('UTF-8').encode('UTF-8')
+            col.append(y)
+
+        names.append(col)
         for result in cursor:
             try:
                 datetime.time.strftime(result[0], '%H:%M')
@@ -496,7 +510,13 @@ def dist(what, form):
     else:
         cursor = g.conn.execute(text(cmd), what1=what2)
         names = []
-        names.append(cursor.keys())
+        col = []
+        for y in cursor.keys():
+            y = y.decode('UTF-8').encode('UTF-8')
+            col.append(y)
+
+        names.append(col)
+
         for result in cursor:
             xs = []
             for x in result:
@@ -609,6 +629,17 @@ def searchveh():
 @app.route('/resultcol', methods=['POST', 'GET'])
 def resultcol():
     context = searchall('c_time', 'collision_occurat', '*')
+    return judge(context)
+
+@app.route('/reportre')
+def resultre():
+    x = session['email_address']
+    cmd = "SELECT * FROM report WHERE uid=" + "'"+str(x)+"'"
+    cursor = g.conn.execute(cmd)
+    names = []
+    for result in cursor:
+        names.append(result)  # can also be accessed using result[0]
+    context = dict(data=names)
     return judge(context)
 
 
