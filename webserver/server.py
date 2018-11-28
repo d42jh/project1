@@ -473,11 +473,11 @@ def searchall(what, form, x):
                 x1 = datetime.time.strftime(result[0], '%H:%M')
             # x1 = datetime.time.strftime(result[0], '%H:%M')
             try:
-                datetime.date.strftime(result[1], '%D')
+                datetime.date.strftime(result[1], '%b-%d-%Y')
             except:
                 x2 = result[1]
             else:
-                x2 = datetime.date.strftime(result[1], '%D')
+                x2 = datetime.date.strftime(result[1], '%b-%d-%Y')
             # x2 = datetime.date.strftime(result[1], '%D')
             x3 = result[2].encode('UTF-8')
             x4 = result[3].encode('UTF-8')
@@ -544,11 +544,11 @@ def dist(what, form):
                         x1 = datetime.time.strftime(x, '%H:%M')
                 elif isinstance(x, datetime.date):
                     try:
-                        datetime.date.strftime(x, '%D')
+                        datetime.date.strftime(x, '%b-%d-%Y')
                     except:
                         x1 = x
                     else:
-                        x1 = datetime.date.strftime(x, '%D')
+                        x1 = datetime.date.strftime(x, '%b-%d-%Y')
                 elif isinstance(x, unicode):
                     x1 = x.encode('UTF-8')
                 elif isinstance(x, numbers.Integral):
@@ -677,11 +677,11 @@ def resultre():
                     x1 = datetime.time.strftime(x, '%H:%M')
             elif isinstance(x, datetime.date):
                 try:
-                    datetime.date.strftime(x, '%D')
+                    datetime.date.strftime(x, '%b-%d-%Y')
                 except:
                     x1 = x
                 else:
-                    x1 = datetime.date.strftime(x, '%D')
+                    x1 = datetime.date.strftime(x, '%b-%d-%Y')
             elif isinstance(x, unicode):
                 x1 = x.encode('UTF-8')
             elif isinstance(x, numbers.Integral):
